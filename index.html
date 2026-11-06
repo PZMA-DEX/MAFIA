@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0e1220">
+<meta name="description" content="최대 20명이 3D 마을을 걸어 다니며 하는 마피아 게임. 온라인·오프라인 모두 지원">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="달빛마피아">
+<title>달빛마을 마피아 — 20인 3D 마피아</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+<style>
+:root { --bg: #0e1220; --card: rgba(18, 22, 38, 0.92); --line: rgba(255,255,255,0.12); --text: #eef1ff; --mut: #a3abc8; --acc: #ffcf5a; --red: #ff5a5f; --blue: #5aa9ff; --green: #5ee08f; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', system-ui, sans-serif; }
+canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { touch-action: manipulation; font: inherit; color: inherit; border: 1px solid var(--line); background: rgba(255,255,255,0.08); border-radius: 12px; padding: 9px 14px; cursor: pointer; }
+button:hover { background: rgba(255,255,255,0.16); }
+button.primary { background: var(--acc); color: #2a1d00; border-color: transparent; font-weight: 900; }
+button.danger { background: var(--red); color: #fff; border-color: transparent; font-weight: 700; }
+button:disabled { opacity: 0.4; cursor: default; }
+input, select { font: inherit; color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; outline: none; }
+input:focus { border-color: var(--acc); }
+[hidden] { display: none !important; }
+.screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; z-index: 30; background: radial-gradient(ellipse at 50% 20%, rgba(40,52,100,0.55), rgba(8,10,20,0.85)); overflow: auto; }
+.card { width: min(480px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+h1 { font-family: 'Black Han Sans', sans-serif; font-weight: 400; font-size: 40px; margin: 0; letter-spacing: 1px; line-height: 1.1; }
+h1 b { color: var(--red); font-weight: 400; }
+.sub { color: var(--mut); margin: 6px 0 16px; font-size: 14px; }
+.lbl { font-size: 13px; color: var(--mut); margin: 14px 0 6px; font-weight: 700; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row > input { flex: 1; min-width: 120px; }
+.swatches { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.sw { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; padding: 0; }
+.sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--acc); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { padding: 6px 11px; border-radius: 999px; font-size: 13px; }
+.chip.on { background: var(--acc); color: #2a1d00; border-color: transparent; font-weight: 700; }
+.hint { color: var(--mut); font-size: 12.5px; margin-top: 10px; line-height: 1.5; }
+.link { background: none; border: none; color: var(--acc); padding: 8px 0 0; text-decoration: underline; }
+#preview { width: 110px; height: 110px; float: right; margin: -6px -6px 0 8px; }
+
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+#hud > * { pointer-events: auto; }
+#topbar { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; white-space: nowrap; }
+#phName { font-weight: 900; }
+#phTime { font-variant-numeric: tabular-nums; color: var(--acc); font-weight: 900; min-width: 36px; text-align: right; }
+#roomTag { color: var(--mut); font-size: 12px; }
+#myRole { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; background: var(--card); font-weight: 700; border-radius: 999px; }
+#btnNote { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 46px); left: 10px; background: var(--card); border-radius: 999px; font-weight: 700; }
+#clueNav { white-space: pre-line !important; text-align: center; position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 50px); left: 50%; transform: translateX(-50%); background: rgba(40,30,5,0.85); border: 1px solid var(--acc); color: #ffe7a3; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; white-space: nowrap; pointer-events: none; }
+.pl .memo { cursor: pointer; padding: 0 2px; opacity: 0.75; }
+.pl .memo:hover { opacity: 1; }
+#btnMenu { position: absolute; top: max(10px, env(safe-area-inset-top)); right: 10px; background: var(--card); border-radius: 999px; width: 42px; padding: 9px 0; }
+#banner { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); width: min(560px, 92vw); text-align: center; background: rgba(10,12,24,0.88); border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px; font-size: 17px; font-weight: 700; line-height: 1.55; white-space: pre-line; opacity: 0; transition: opacity .4s; pointer-events: none; }
+#banner.show { opacity: 1; }
+#side { position: absolute; right: 10px; top: 62px; width: 230px; max-height: calc(100% - 300px); overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 8px; }
+.sideHead { font-size: 12px; color: var(--mut); padding: 2px 6px 6px; display: flex; justify-content: space-between; }
+.pl { display: flex; align-items: center; gap: 8px; padding: 6px 7px; border-radius: 10px; font-size: 13.5px; cursor: default; }
+.pl.click { cursor: pointer; }
+.pl.click:hover { background: rgba(255,255,255,0.1); }
+.pl.sel { background: rgba(255,207,90,0.22); outline: 1px solid var(--acc); }
+.pl.dead { opacity: 0.45; text-decoration: line-through; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 1px solid rgba(255,255,255,0.4); }
+.pl .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl .vc { font-weight: 900; color: var(--acc); }
+.tag { font-size: 10.5px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.12); }
+.tag.red { background: rgba(255,90,95,0.35); }
+#chat { position: absolute; left: 10px; bottom: 10px; width: min(380px, calc(100% - 20px)); background: var(--card); border: 1px solid var(--line); border-radius: 16px; display: flex; flex-direction: column; }
+#chatLog { height: 170px; overflow: auto; padding: 8px 10px; font-size: 13.5px; line-height: 1.5; }
+#chatLog .m { word-break: break-all; }
+#chatLog .s { color: var(--acc); font-size: 12.5px; }
+#chatLog .ch-m { color: #ff9aa0; }
+#chatLog .ch-d { color: #b9c2ff; font-style: italic; }
+.chatRow { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); align-items: center; }
+.chatRow input { flex: 1; min-width: 0; padding: 8px 10px; }
+#chatCh { font-size: 11px; padding: 3px 7px; border-radius: 8px; background: rgba(255,255,255,0.12); white-space: nowrap; }
+body.mafchat #chat { border-color: rgba(255,90,95,0.8); box-shadow: 0 0 0 2px rgba(255,90,95,0.25); background: rgba(40,8,14,0.92); }
+body.mafchat #chatCh { background: rgba(255,90,95,0.45); color: #fff; }
+body.mafchat #chatLog .m:not(.ch-m) { opacity: 0.5; }
+#dim { position: fixed; inset: 0; background: rgba(0,0,0,0.72); pointer-events: none !important; display: none; }
+body.nightdim #dim { display: block; }
+#sleep { position: fixed; inset: 0; background: #04060f; display: none; place-items: center; pointer-events: none !important; }
+#sleepTxt { white-space: pre-line; font-size: 18px; font-weight: 900; text-align: center; padding: 20px; line-height: 1.6; max-width: 90vw; }
+body.sleeping #sleep { display: grid; }
+body.sleeping #dim { display: none; }
+.pillnote { background: var(--card); padding: 9px 14px; border-radius: 12px; border: 1px solid var(--line); }
+body.offline .chatRow { display: none; }
+#mobTools { position: absolute; right: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 46px); display: none; flex-direction: column; gap: 6px; }
+#mobTools button { background: var(--card); border-radius: 999px; width: 42px; padding: 8px 0; }
+.dexc { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.dexi { font-size: 30px; width: 40px; text-align: center; flex: none; }
+.dexc p { margin: 4px 0; font-size: 13.5px; }
+.dexc .dexw { color: var(--acc); font-size: 12.5px; }
+#pass { z-index: 35; align-items: start; }
+.pcard { margin-top: max(12px, env(safe-area-inset-top)); }
+.ptop { display: flex; justify-content: space-between; align-items: center; font-weight: 900; margin-bottom: 10px; }
+.mini { padding: 5px 10px; margin-left: 4px; border-radius: 999px; }
+.big { font-size: 17px; padding: 13px 20px; }
+.who { font-size: 26px; font-weight: 900; text-align: center; margin: 18px 0 8px; }
+.ptimer { font-size: 54px; font-weight: 900; text-align: center; color: var(--acc); font-variant-numeric: tabular-nums; margin: 6px 0; }
+.pnews { white-space: pre-line; font-weight: 700; font-size: 16px; line-height: 1.6; text-align: center; }
+.pm { background: rgba(255,207,90,0.12); border: 1px solid rgba(255,207,90,0.4); border-radius: 12px; padding: 10px 12px; font-weight: 700; }
+.steps { display: flex; gap: 20px; justify-content: center; text-align: center; }
+.steps b { display: inline-block; min-width: 48px; font-size: 34px; vertical-align: middle; }
+.steps button { font-size: 22px; width: 48px; }
+.opts button { min-height: 42px; }
+#prompt { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); background: rgba(10,12,24,0.9); border: 1px solid var(--acc); border-radius: 999px; padding: 9px 18px; font-weight: 700; white-space: nowrap; }
+#prompt kbd { background: var(--acc); color: #2a1d00; border-radius: 6px; padding: 1px 7px; margin-right: 6px; font-family: inherit; }
+#lobby { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(520px, calc(100% - 420px)); min-width: 300px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; }
+#lobby h3 { margin: 0 0 8px; font-size: 15px; }
+#lobby .grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; font-size: 13px; }
+#lobby .deck { font-size: 12.5px; color: var(--mut); margin: 8px 0; line-height: 1.6; }
+#actbar { position: absolute; left: 400px; right: 250px; bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+#finalBox { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); display: flex; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 10px; }
+#finalBox button { font-size: 18px; padding: 12px 26px; font-weight: 900; }
+#finalBox button.on { outline: 3px solid #fff; }
+#actbar button.on { outline: 2px solid var(--acc); background: rgba(255,207,90,0.2); }
+#joy { position: absolute; left: 24px; bottom: 236px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid var(--line); display: none; touch-action: none; }
+#knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.35); }
+#btnE { position: absolute; right: 24px; bottom: 236px; width: 76px; height: 76px; border-radius: 50%; font-size: 22px; font-weight: 900; background: var(--acc); color: #2a1d00; display: none; }
+.touch #joy { display: block; }
+.touch.canE #btnE { display: block; }
+#lobby .row { position: sticky; bottom: -12px; background: #141a2c; padding: 8px 0 2px; }
+#modal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(0,0,0,0.55); padding: 14px; }
+.mcard { width: min(520px, 100%); max-height: 88vh; overflow: auto; background: #151a2e; border: 1px solid var(--line); border-radius: 22px; padding: 20px; }
+.mcard h2 { margin: 0 0 6px; font-family: 'Black Han Sans'; font-weight: 400; font-size: 28px; }
+.roleBig { font-size: 64px; text-align: center; margin: 6px 0; }
+.team { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.team.mafia, .team.wolf { background: rgba(255,90,95,0.25); color: #ffb3b6; }
+.team.town, .team.village { background: rgba(90,169,255,0.25); color: #b8dcff; }
+.team.neutral, .team.tanner { background: rgba(255,207,90,0.25); color: #ffe2a1; }
+.mcard p { line-height: 1.65; color: #d5daf0; }
+.mcard .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.opts button.on { background: var(--acc); color: #2a1d00; font-weight: 700; }
+table.res { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.res td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+table.res tr.win td { color: var(--acc); font-weight: 700; }
+.help h4 { margin: 14px 0 4px; }
+.help li { margin: 3px 0; line-height: 1.55; color: #d5daf0; font-size: 14px; }
+#toast { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); padding: 10px 18px; border-radius: 12px; z-index: 50; opacity: 0; transition: opacity .3s; pointer-events: none; font-weight: 700; text-align: center; }
+#toast.show { opacity: 1; }
+#pm { position: absolute; left: 10px; top: 104px; width: min(300px, 46vw); background: rgba(60,10,20,0.85); border: 1px solid rgba(255,90,95,0.5); border-radius: 14px; padding: 9px 12px; font-size: 13.5px; line-height: 1.5; }
+@media (max-width: 760px) {
+  /* ── 모바일 HUD 배치 ──
+     1줄: [상단바 ··········] [☰]
+     2줄: [직업] ··· [수첩]  [👥]
+     3줄: [단서·미션 안내 ····] [💬]
+     아래: 채팅(가로 전체) 위로 조이스틱 · 행동 버튼 · E */
+  body { --st: max(8px, env(safe-area-inset-top)); --sb: max(8px, env(safe-area-inset-bottom)); --chatH: 128px; --gap: calc(var(--sb) + var(--chatH) + 10px); }
+  body.chatSmall { --chatH: 92px; --gap: calc(var(--sb) + var(--chatH) + 10px); }
+  body.mafchat { --chatH: 150px; --gap: calc(var(--sb) + var(--chatH) + 10px); }
+  #mobTools { display: flex; top: calc(var(--st) + 44px); right: 8px; }
+  #mobTools button, #btnMenu { width: 38px; padding: 7px 0; font-size: 15px; }
+  #btnMenu { top: var(--st); right: 8px; }
+  #topbar { top: var(--st); left: 8px; right: 54px; transform: none; justify-content: center; gap: 6px; font-size: 13px; padding: 7px 10px; overflow: hidden; }
+  #phName { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #roomTag { display: none; }
+  #myRole { top: calc(var(--st) + 44px); left: 8px; font-size: 13px; padding: 6px 11px; max-width: calc(50% - 40px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #btnNote { top: calc(var(--st) + 44px); left: auto; right: 54px; font-size: 13px; padding: 6px 11px; }
+  #clueNav { top: calc(var(--st) + 84px); left: 8px; right: 54px; transform: none; font-size: 11.5px; line-height: 1.45; padding: 5px 10px; border-radius: 12px; white-space: pre-line !important; }
+  #pm { top: calc(var(--st) + 132px); left: 8px; width: auto; right: 54px; font-size: 12.5px; padding: 7px 10px; }
+  #banner { top: calc(var(--st) + 84px); left: 8px; right: 54px; width: auto; transform: none; font-size: 13.5px; padding: 9px 12px; line-height: 1.5; border-radius: 14px; }
+  body.hideSide:not(.voting) #side { display: none; }
+  #side { right: 54px; top: calc(var(--st) + 84px); width: 170px; max-height: calc(100% - var(--gap) - 150px); padding: 6px; }
+  .pl { font-size: 12.5px; padding: 4px 5px; gap: 6px; }
+  #chat { left: 8px; right: 8px; width: auto; bottom: var(--sb); border-radius: 14px; }
+  #chatLog { height: calc(var(--chatH) - 46px); font-size: 12.5px; padding: 5px 9px; line-height: 1.4; }
+  .chatRow { padding: 4px 5px; }
+  .chatRow input { padding: 7px 9px; font-size: 14px; }
+  #chatSend { padding: 7px 12px; }
+  #joy { left: 12px; bottom: var(--gap); width: 112px; height: 112px; }
+  #knob { left: 31px; top: 31px; }
+  #btnE { right: 12px; bottom: calc(var(--gap) + 18px); width: 70px; height: 70px; }
+  #actbar { left: 134px; right: 10px; bottom: var(--gap); transform: none; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px; max-width: none; }
+  .touch.canE #actbar { right: 92px; }
+  #actbar button, #actbar .pillnote { font-size: 13px; padding: 8px 10px; text-align: center; }
+  #actbar .pillnote { font-size: 11.5px; padding: 5px 8px; }
+  #prompt { bottom: calc(var(--gap) + 128px); max-width: calc(100% - 24px); white-space: normal; text-align: center; font-size: 12.5px; padding: 7px 13px; border-radius: 14px; }
+  #finalBox { bottom: calc(var(--gap) + 4px); }
+  #finalBox button { font-size: 16px; padding: 11px 18px; }
+  .card { padding: 18px; }
+  #lobby { top: calc(var(--st) + 44px); left: 8px; right: 54px; bottom: auto; width: auto; transform: none; min-width: 0; max-height: calc(100% - var(--st) - 44px - var(--gap) - 122px); overflow: auto; padding: 10px 11px; }
+  #lobby .grid { gap: 5px 8px; font-size: 12px; }
+  #lobby .chips { gap: 4px; }
+  #lobby .chip { padding: 5px 9px; font-size: 12px; }
+  #lobby .row { flex-wrap: wrap; gap: 6px; }
+  #lobby .row span { flex-basis: 100% !important; order: -1; text-align: left !important; font-size: 11.5px !important; }
+  #lobby .row button { flex: 1; padding: 9px 6px; }
+  body.inlobby #side { top: auto; bottom: calc(var(--gap) + 4px); max-height: 26vh; }
+  .mcard { padding: 16px; border-radius: 18px; }
+  .mcard h2 { font-size: 24px; }
+  h1 { font-size: 32px; }
+}
+</style>
+<link rel="stylesheet" href="mobile-design.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="title" class="screen">
+  <div class="card">
+    <canvas id="preview" width="220" height="220"></canvas>
+    <h1>달빛마을<br><b>마피아</b></h1>
+    <p class="sub">최대 20명 · 직접 걸어 다니며 하는 3D 마피아<br>밤엔 숨어들고, 낮엔 단서와 시체를 찾는 마을</p>
+    <div class="lbl">닉네임</div>
+    <input id="nick" maxlength="10" placeholder="최대 10자" style="width:100%">
+    <div class="lbl">색깔</div>
+    <div id="colors" class="swatches"></div>
+    <div class="lbl">모자</div>
+    <div id="hats" class="chips"></div>
+    <div class="lbl">방</div>
+    <div class="row"><button id="btnPublic" class="primary" style="flex:1">공개 광장 입장</button></div>
+    <div class="row" style="margin-top:8px"><input id="roomCode" placeholder="방 코드 (영문·숫자)" maxlength="12"><button id="btnCode">코드로 입장</button><button id="btnNew">새 방</button></div>
+    <div class="row" style="margin-top:8px"><button id="btnPass" style="flex:1">📱 폰 하나로 하기 (오프라인 · 인터넷 없이)</button></div>
+    <div id="netInfo" class="hint"></div>
+    <div class="row" style="gap:14px"><button id="btnHelp" class="link">게임 방법</button><button id="btnDex" class="link">📖 직업 도감</button><button id="btnInstall" class="link" hidden>📲 앱으로 설치</button></div>
+    <div id="iosHint" class="hint" hidden>📲 아이폰: Safari 공유 버튼 → "홈 화면에 추가"로 앱처럼 쓸 수 있어요.</div>
+  </div>
+</div>
+
+<div id="hud" hidden>
+  <div id="dim"></div>
+  <div id="sleep"><div id="sleepTxt"></div></div>
+  <button id="myRole">🎭 대기실</button>
+  <button id="btnNote" hidden>📒 수첩</button>
+  <div id="clueNav" hidden></div>
+  <div id="topbar"><span id="phName">대기실</span><span id="phTime"></span><span id="roomTag"></span></div>
+  <button id="btnMenu">☰</button>
+  <div id="mobTools"><button id="btnSide" title="플레이어 목록">👥</button><button id="btnChatT" title="채팅 크게/작게">💬</button></div>
+  <div id="pm" hidden></div>
+  <div id="banner"></div>
+  <div id="side"><div class="sideHead"><span>플레이어</span><span id="pcount"></span></div><div id="plist"></div></div>
+  <div id="chat">
+    <div id="chatLog"></div>
+    <div class="chatRow"><span id="chatCh">전체</span><input id="chatInput" maxlength="60" placeholder="Enter로 채팅"><button id="chatSend">↵</button></div>
+  </div>
+  <div id="prompt" hidden></div>
+  <div id="lobby" hidden></div>
+  <div id="actbar"></div>
+  <div id="finalBox" hidden><button id="fYes" class="danger">👍 찬성(처형)</button><button id="fNo">✋ 반대</button></div>
+  <div id="joy"><div id="knob"></div></div>
+  <button id="btnE">E</button>
+</div>
+
+<div id="pass" class="screen" hidden></div>
+<div id="modal" hidden><div class="mcard" id="mbody"></div></div>
+<div id="toast"></div>
+
+<script src="js/ui-icons.js" defer></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+/* Moon Village · visual layer. Game rules, hit tests and input logic are unchanged. */
+:root {
+  --bg: #101c20;
+  --card: rgba(18, 35, 39, .96);
+  --line: rgba(215, 231, 223, .16);
+  --text: #f1eee2;
+  --mut: #acbdb6;
+  --acc: #e8bd73;
+  --red: #bf6462;
+  --blue: #92bac6;
+  --green: #91bca6;
+}
+html, body { font-family: 'Noto Sans KR', system-ui, sans-serif; letter-spacing: -.025em; }
+body { overscroll-behavior: none; }
+button { min-height: 44px; border-radius: 10px; background: rgba(224, 235, 225, .065); font-weight: 700; transition: background .15s, border-color .15s; }
+button:hover { background: rgba(224, 235, 225, .13); }
+button:active { filter: brightness(.9); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+button.primary { color: #28342e; box-shadow: 0 3px 12px #0002; }
+button.danger { background: #a54e4d; }
+input, select { min-height: 44px; font-size: 16px; background: #0d1c20; border-radius: 9px; }
+input::placeholder { color: #829a92; }
+select option { color: var(--text); background: #162b2e; }
+.screen { background: linear-gradient(105deg, #0b191dec, #142b30a6 65%, #0b191dcc); padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+.card { padding: 28px; border-radius: 18px; background: linear-gradient(150deg, #20383af5, #12262af7); border-color: #a1b9a92e; box-shadow: 0 20px 80px #0006, inset 0 1px #ffffff0a; }
+#title .card { position: relative; width: min(500px, 100%); }
+#title .card::before { content: 'MOON VILLAGE  /  SOCIAL MYSTERY'; display: block; color: var(--acc); font-size: 9px; font-weight: 700; letter-spacing: .18em; margin-bottom: 19px; }
+h1 { font-family: 'Noto Sans KR', system-ui, sans-serif; font-size: 39px; font-weight: 900; letter-spacing: -.055em; line-height: 1.17; }
+h1 b { color: #e9c48c; font-weight: 900; }
+.sub { color: #becbc3; line-height: 1.7; font-size: 12px; margin: 14px 0 21px; clear: both; }
+#preview { background: radial-gradient(circle at 50% 60%, #b2c9a923, #b2c9a900 70%); width: 112px; height: 112px; margin-top: -5px; }
+.lbl { color: #c9d3c9; font-size: 11px; margin: 14px 0 7px; letter-spacing: .025em; }
+.swatches { display: flex; overflow-x: auto; gap: 7px; padding: 4px 3px 7px; scrollbar-width: thin; }
+.sw { flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; border-radius: 13px; border-width: 3px; box-shadow: inset 0 0 0 7px #10242740; }
+.sw.on { border-color: #f1eee2; box-shadow: 0 0 0 1px var(--acc), inset 0 0 0 7px #10242740; }
+.chip { border-radius: 9px; padding: 8px 12px; font-size: 12px; }
+.chips { gap: 6px; }
+#hats { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+#hats .chip { flex: none; }
+.link { font-size: 12px; color: #d7c299; text-decoration: none; padding: 10px 0; }
+.link:hover { background: none; color: #fff1cf; }
+.hint { font-size: 11px; line-height: 1.65; color: #9db3aa; }
+#btnPublic { min-height: 48px; }
+#btnPass { font-size: 12px; background: #ffffff03; color: #c1d0c6; }
+#topbar, #myRole, #btnNote, #btnMenu, #mobTools button { border-radius: 10px; }
+#topbar { min-height: 44px; background: #14282de8; border-color: #d0ddcb2b; }
+#phTime { font-size: 16px; padding-left: 9px; border-left: 1px solid var(--line); }
+#side, #chat, #lobby, #finalBox { border-radius: 13px; box-shadow: 0 5px 24px #0002; }
+#side { background: #10262bf5; }
+.sideHead { padding: 6px 7px 9px; font-size: 11px; color: #c4d1c8; }
+.pl { min-height: 44px; border-radius: 8px; border-bottom: 1px solid #e7ebd909; }
+.pl.sel { background: #c4a46725; }
+.pl .memo { display: inline-flex; min-width: 32px; min-height: 36px; align-items: center; justify-content: center; }
+.dot { width: 12px; height: 12px; border-radius: 4px; }
+#chat { background: #12282df2; }
+#chatLog { scrollbar-width: thin; }
+#chatLog .s { color: #d7c095; }
+#chatCh { color: #bdcfc4; background: #8fb5a115; }
+#chatSend { min-width: 44px; }
+#clueNav { background: #282d20ed; color: #e6cf9c; border-color: #d6b57865; border-radius: 10px; font-weight: 400; }
+#banner { background: #172b2df5; color: #f1e9d6; border-color: #d4bb7850; border-radius: 12px; }
+#prompt { background: #14262bed; color: #f0dfbb; border-color: #d3b47d77; font-size: 13px; border-radius: 10px; }
+#joy { border: 1px solid #e1e8d755; background: radial-gradient(circle, #15303750 32%, #10262a80 33%); box-shadow: inset 0 0 0 8px #d5e2d308; }
+#knob { background: #ced9c4b8; border: 1px solid #faf6dd70; box-shadow: 0 2px 12px #0003; }
+#btnE { background: #e8bd73ed; color: #25372f; border: 3px solid #f6dfb255; box-shadow: 0 3px 18px #0003; }
+#actbar button { background: #183137f5; border-color: #d0ddcb40; }
+#actbar button.primary { background: var(--acc); color: #28342e; }
+#actbar button.danger { background: #a54e4d; }
+#lobby h3 { color: #f0dfbd; font-size: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+#lobby .row { background: #14282d; }
+#lobby .deck { color: #aebfb6; }
+#modal { background: #061113b8; padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+.mcard { background: #183035; border-radius: 16px; padding: 24px; max-height: 88dvh; scrollbar-width: thin; box-shadow: 0 20px 80px #0007; }
+.mcard h2 { font-family: inherit; font-weight: 900; font-size: 24px; letter-spacing: -.04em; }
+.mcard p, .help li { color: #d1ddd4; }
+.roleBig { color: var(--acc); }
+.dexi { color: var(--acc); }
+.team { border-radius: 5px; }
+.dexc { padding: 13px 0; }
+#toast { background: #10262af5; color: #f1e5c9; border: 1px solid #d3b47d66; font-size: 14px; max-width: 90vw; }
+#sleepTxt { color: #b7c5bc; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+#pass .card { width: min(520px, 100%); }
+.pcard { margin-top: 0; }
+.pm { background: #b89a5a14; color: #e2d2ac; border-color: #d4b97c4a; }
+
+@media (max-width: 760px) {
+  body { --st: max(10px, env(safe-area-inset-top)); --sb: max(8px, env(safe-area-inset-bottom)); --chatH: 132px; --gap: calc(var(--sb) + var(--chatH) + 12px); }
+  body.chatSmall { --chatH: 102px; --gap: calc(var(--sb) + var(--chatH) + 12px); }
+  body.mafchat { --chatH: 150px; --gap: calc(var(--sb) + var(--chatH) + 12px); }
+  .screen { place-items: start center; padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)); }
+  #title .card { margin: auto 0; padding: 23px 20px 17px; }
+  #title .card::before { font-size: 8px; margin-bottom: 16px; }
+  h1 { font-size: 34px; }
+  .sub { font-size: 11px; margin: 12px 0 15px; }
+  #preview { width: 98px; height: 98px; }
+  .lbl { margin-top: 11px; }
+  .sw { flex-basis: 44px; }
+  #btnPass { font-size: 11px; padding: 10px 5px; }
+  #topbar { left: 10px; right: 62px; padding: 7px 12px; font-size: 12px; justify-content: space-between; }
+  #btnMenu, #mobTools button { width: 44px; height: 44px; padding: 0; font-size: 17px; }
+  #btnMenu { right: 10px; }
+  #mobTools { right: 10px; top: calc(var(--st) + 52px); gap: 8px; }
+  #myRole { top: calc(var(--st) + 52px); left: 10px; padding: 8px 11px; max-width: calc(100% - 177px); font-size: 12px; }
+  #btnNote { top: calc(var(--st) + 52px); right: 62px; padding: 8px 11px; font-size: 12px; }
+  #clueNav { top: calc(var(--st) + 104px); left: 10px; right: 62px; padding: 6px 10px; font-size: 11px; line-height: 1.55; }
+  #banner { top: calc(var(--st) + 160px); left: 10px; right: 62px; font-size: 12px; padding: 9px 12px; }
+  #pm { top: calc(var(--st) + 160px); left: 10px; right: 62px; }
+  #side { top: calc(var(--st) + 104px); right: 62px; width: min(236px, calc(100vw - 76px)); max-height: calc(100% - var(--gap) - var(--st) - 118px); padding: 7px; }
+  .pl { min-height: 44px; padding: 4px 7px; font-size: 12px; }
+  #chat { left: 10px; right: 10px; bottom: var(--sb); }
+  #chatLog { height: calc(var(--chatH) - 54px); padding: 6px 10px; font-size: 11px; line-height: 1.5; }
+  .chatRow { padding: 4px; }
+  .chatRow input { font-size: 16px; min-height: 44px; padding: 8px; }
+  #chatSend { padding: 7px 10px; }
+  #chatCh { padding: 4px 6px; font-size: 10px; }
+  #joy { left: max(14px, env(safe-area-inset-left)); width: 112px; height: 112px; bottom: var(--gap); }
+  #knob { left: 31px; top: 31px; width: 50px; height: 50px; }
+  #btnE { right: max(14px, env(safe-area-inset-right)); bottom: calc(var(--gap) + 20px); width: 70px; height: 70px; }
+  #actbar { left: 136px; right: 14px; bottom: var(--gap); gap: 7px; max-height: min(32vh, 220px); overflow-y: auto; scrollbar-width: thin; }
+  .touch.canE #actbar { right: 94px; }
+  #actbar button { font-size: 11px; min-height: 44px; padding: 8px 7px; }
+  #actbar .pillnote { font-size: 10px; line-height: 1.5; }
+  #prompt { bottom: calc(var(--gap) + 126px); max-width: calc(100% - 28px); font-size: 11px; padding: 8px 12px; }
+  #lobby { top: calc(var(--st) + 52px); left: 10px; right: 62px; padding: 12px; max-height: calc(100% - var(--st) - var(--gap) - 174px); min-height: 100px; }
+  #lobby .grid { grid-template-columns: 1fr; gap: 8px; font-size: 12px; }
+  #lobby .grid > .chips { margin-bottom: 7px; }
+  #lobby .chip { padding: 8px 10px; min-height: 44px; font-size: 11px; }
+  #lobby .row { bottom: -12px; padding-top: 10px; }
+  #lobby .row button { min-height: 44px; font-size: 11px; }
+  body.inlobby #side { top: calc(var(--st) + 104px); bottom: auto; max-height: calc(100% - var(--gap) - var(--st) - 118px); }
+  #finalBox { bottom: calc(var(--gap) + 4px); max-width: calc(100% - 28px); padding: 8px; }
+  #finalBox button { min-height: 48px; font-size: 13px; padding: 10px 14px; white-space: nowrap; }
+  .mcard { padding: 20px; max-height: 88dvh; }
+  .mcard h2 { font-size: 22px; }
+  .mcard .btns button { min-height: 44px; }
+}
+
+/* Low, landscape screens retain a clear central view and independent scroll panels. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .screen { place-items: start center; }
+  #title .card { margin: 0 auto; }
+  #modal { padding-top: 10px; padding-bottom: 10px; }
+  .mcard { max-height: calc(100dvh - 20px); }
+  body { --st: max(6px, env(safe-area-inset-top)); --sb: max(6px, env(safe-area-inset-bottom)); --chatH: 96px; --gap: calc(var(--sb) + 106px); }
+  body.chatSmall { --chatH: 96px; --gap: calc(var(--sb) + 106px); }
+  body.mafchat { --chatH: 112px; --gap: calc(var(--sb) + 122px); }
+  #topbar { left: 50%; right: auto; transform: translateX(-50%); min-width: 180px; max-width: 43vw; top: var(--st); }
+  #myRole { top: var(--st); left: max(10px, env(safe-area-inset-left)); max-width: 150px; }
+  #btnNote { left: max(10px, env(safe-area-inset-left)); right: auto; top: calc(var(--st) + 50px); }
+  #btnMenu { top: var(--st); right: max(10px, env(safe-area-inset-right)); }
+  #mobTools { display: flex; top: calc(var(--st) + 50px); right: max(10px, env(safe-area-inset-right)); }
+  #clueNav { top: calc(var(--st) + 50px); left: 50%; right: auto; transform: translateX(-50%); width: min(350px, 45vw); font-size: 10px; }
+  #banner, #pm { top: calc(var(--st) + 100px); left: 50%; right: auto; transform: translateX(-50%); width: min(350px, 45vw); font-size: 11px; }
+  #chat { left: 150px; right: 150px; width: auto; bottom: var(--sb); }
+  #chatLog { height: calc(var(--chatH) - 54px); }
+  #joy { bottom: max(12px, env(safe-area-inset-bottom)); left: max(14px, env(safe-area-inset-left)); width: 112px; height: 112px; }
+  #knob { left: 31px; top: 31px; }
+  #btnE { right: max(28px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); }
+  #actbar, .touch.canE #actbar { left: 150px; right: 150px; bottom: var(--gap); flex-direction: row; flex-wrap: wrap; max-height: 98px; }
+  #actbar button { flex: 1 1 100px; }
+  #prompt { bottom: calc(var(--gap) + 102px); }
+  #lobby { top: calc(var(--st) + 50px); left: 150px; right: 64px; width: auto; transform: none; min-width: 0; max-height: calc(100dvh - var(--st) - var(--gap) - 60px); }
+  #lobby .grid { grid-template-columns: auto 1fr; }
+  #side, body.inlobby #side { top: calc(var(--st) + 50px); right: 62px; bottom: auto; max-height: calc(100dvh - var(--st) - 70px); }
+  #finalBox { bottom: var(--gap); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button, #banner, #toast { transition: none; }
+}
+
+/* All original player colours visible, without horizontal scrolling. */
+.swatches {display:grid;grid-template-columns:repeat(10,minmax(0,1fr));overflow:visible;gap:6px;}
+.sw {width:100%;height:auto;aspect-ratio:1;min-height:0;border-radius:50%;box-shadow:none;}
+.sw.on {box-shadow:0 0 0 2px var(--acc);}
+@media(max-width:480px){.swatches{grid-template-columns:repeat(5,minmax(0,1fr));}.sw{min-height:44px;max-width:52px;justify-self:center;}}
